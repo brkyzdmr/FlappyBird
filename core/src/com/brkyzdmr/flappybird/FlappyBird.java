@@ -8,13 +8,18 @@ import com.brkyzdmr.flappybird.states.GameStateManager;
 import com.brkyzdmr.flappybird.states.HomeState;
 
 public class FlappyBird extends ApplicationAdapter {
+	private static FlappyBird instance = new FlappyBird();
 	public static final int WIDTH = 480;
 	public static final int HEIGHT = 800;
 	public static final String TITLE = "Flappy Bird";
 
 	private GameStateManager gsm;
 	private SpriteBatch batch;
-	
+
+	public static FlappyBird getInstance() {
+		return instance;
+	}
+
 	@Override
 	public void create () {
 		batch = new SpriteBatch();

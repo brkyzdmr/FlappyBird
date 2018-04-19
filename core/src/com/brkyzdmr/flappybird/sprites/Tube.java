@@ -5,6 +5,7 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.Ray;
+import com.badlogic.gdx.physics.bullet.collision.ClosestRayResultCallback;
 
 import java.util.Random;
 
@@ -17,9 +18,7 @@ public class Tube {
     private Texture topTube, bottomTube;
     private Vector2 posTopTube, posBotTube;
     private Random rand;
-    private Rectangle boundsTop, boundsBot;
-    private Vector3 rayPos, rayDir;
-    private Ray pointRay;
+    private Rectangle boundsTop, boundsBot, pointArea;
 
     public Tube(float x) {
         topTube = new Texture("sprites/top-tube.png");
@@ -31,9 +30,7 @@ public class Tube {
 
         boundsTop = new Rectangle(posTopTube.x, posTopTube.y, topTube.getWidth(), topTube.getHeight());
         boundsBot = new Rectangle(posBotTube.x, posBotTube.y, bottomTube.getWidth(), bottomTube.getHeight());
-        rayPos = new Vector3(posBotTube.x + topTube.getWidth()/2,posTopTube.y, 0);
-        rayDir = new Vector3(0, -1, 0);
-        pointRay = new Ray(rayPos, rayDir);
+        //pointArea = new Rectangle(posBotTube.x - bottomTube.getWidth()/3, posBotTube.y, bottomTube.getWidth()/3, TUBE_GAP);
     }
 
     public Texture getTopTube() {
@@ -52,8 +49,8 @@ public class Tube {
         return posBotTube;
     }
 
-    public Ray getPointRay() {
-        return pointRay;
+    public Rectangle getPointArea() {
+        return pointArea;
     }
 
     public void reposition(float x) {
@@ -61,17 +58,14 @@ public class Tube {
         posBotTube.set(x, posTopTube.y - TUBE_GAP - bottomTube.getHeight());
         boundsTop.setPosition(posTopTube.x, posTopTube.y);
         boundsBot.setPosition(posBotTube.x, posBotTube.y);
-        setRayPosition(posBotTube.x + topTube.getWidth()/2,posTopTube.y);
+        //pointArea.set(posBotTube.x - bottomTube.getWidth()/3, posBotTube.y, bottomTube.getWidth()/3, TUBE_GAP);
     }
 
-    private void setRayPosition(float x, float y) {
-        rayPos = new Vector3(x, y, 0);
-        pointRay = new Ray(rayPos, rayDir);
-    }
 
     public boolean collides(Rectangle player) {
         return player.overlaps(boundsTop) || player.overlaps(boundsBot);
     }
+
 
     public void dispose() {
         topTube.dispose();

@@ -15,7 +15,7 @@ public class Bird {
     private Texture birdTexture;
     private Rectangle bounds;
     private Animation birdAnimation;
-    private Sound flap;
+    private Sound sfx_wing;
 
     public Bird(int x, int y) {
         position = new Vector3(x, y, 0);
@@ -23,7 +23,7 @@ public class Bird {
         birdTexture = new Texture("sprites/bird.png");
         birdAnimation = new Animation(new TextureRegion(birdTexture), 4, 0.5f);
         bounds = new Rectangle(x, y, birdTexture.getWidth(), birdTexture.getHeight() / 4);
-        flap = Gdx.audio.newSound(Gdx.files.internal("sounds/sfx_wing.ogg"));
+        sfx_wing = Gdx.audio.newSound(Gdx.files.internal("sounds/sfx_wing.ogg"));
     }
 
     public void update(float deltaTime) {
@@ -44,7 +44,7 @@ public class Bird {
 
     public void jump() {
         velocity.y = 250;
-        flap.play();
+        sfx_wing.play();
     }
 
     public Vector3 getPosition() {
@@ -61,6 +61,6 @@ public class Bird {
 
     public void dispose() {
         birdTexture.dispose();
-        flap.dispose();
+        sfx_wing.dispose();
     }
 }

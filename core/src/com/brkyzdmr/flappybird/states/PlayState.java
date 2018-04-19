@@ -1,6 +1,9 @@
 package com.brkyzdmr.flappybird.states;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.assets.AssetManager;
+import com.badlogic.gdx.assets.loaders.resolvers.ExternalFileHandleResolver;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -22,18 +25,36 @@ public class PlayState extends State {
     private Texture background, ground, scoreboard;
     private Array<Tube> tubes;
     private Vector2 posGround1, posGround2;
-    private Sound sfx_die, sfx_point;
+    private Sound sfx_hit, sfx_point;
     private BitmapFont font;
-    private int point = 0;
-    private boolean isPointed = false;
+    private static int point = 0;
+    private boolean isPointed = true;
+    private boolean isDetecting = false;
+    private boolean isPaused = false;
+    private AssetManager manager = new AssetManager();
 
     public PlayState(GameStateManager gsm) {
         super(gsm);
-        bird = new Bird(50,100);
+        point = 0;
+        bird = new Bird(50,125);
         camera.setToOrtho(false, FlappyBird.WIDTH / 2, FlappyBird.HEIGHT / 2);
-        background = new Texture("sprites/background-day.png");
-        ground = new Texture("sprites/base.png");
-        scoreboard = new Texture("sprites/scoreboard.png");
+
+        manager.load("sprites/background-day.png", Texture.class);
+        manager.load("sprites/base.png", Texture.class);
+        manager.load("sprites/scoreboard.png", Texture.class);
+        manager.load("sounds/sfx_hit.ogg", Sound.class);
+        manager.load("sounds/sfx_point.ogg", Sound.class);
+
+        manager.finishLoading();
+        if(manager.update()) {
+            background = manager.get("sprites/background-day.png", Texture.class);
+            ground = manager.get("sprites/base.png", Texture.class);
+            scoreboard = manager.get("sprites/scoreboard.png", Texture.class);
+            sfx_hit = manager.get("sounds/sfx_hit.ogg", Sound.class);
+            sfx_point = manager.get("sounds/sfx_point.ogg", Sound.class);
+        }
+
+
         posGround1 = new Vector2(camera.position.x - camera.viewportWidth / 2, GROUND_Y_OFFSET);
         posGround2 = new Vector2((camera.position.x - camera.viewportWidth / 2) + ground.getWidth(), GROUND_Y_OFFSET);
 
@@ -42,8 +63,6 @@ public class PlayState extends State {
             tubes.add(new Tube(i*(TUBE_SPACING + Tube.TUBE_WIDTH)));
         }
 
-        sfx_die = Gdx.audio.newSound(Gdx.files.internal("sounds/sfx_die.ogg"));
-        sfx_point = Gdx.audio.newSound(Gdx.files.internal("sounds/sfx_point.ogg"));
         this.createFont();
     }
 
@@ -56,30 +75,52 @@ public class PlayState extends State {
 
     @Override
     public void update(float deltaTime) {
-        handleInput();
-        bird.update(deltaTime);
-        updateGround();
-        camera.position.x = bird.getPosition().x + 80;  // reposition the camera position
+        if(!isPaused) {
+            handleInput();
+            bird.update(deltaTime);
+            updateGround();
+            camera.position.x = bird.getPosition().x + 80;  // reposition the camera position
 
-        // Reposition the tube that off from camera viewport
-        for (int i=0; i<tubes.size; i++) {
-            Tube tube = tubes.get(i);
-            if(camera.position.x - (camera.viewportWidth / 2) > tube.getPosTopTube().x + tube.getTopTube().getWidth()) {
-                tube.reposition(tube.getPosTopTube().x + ((Tube.TUBE_WIDTH + TUBE_SPACING) * TUBE_COUNT));
+            // Reposition the tube that off from camera viewport
+            for (int i=0; i<tubes.size; i++) {
+                Tube tube = tubes.get(i);
+                if(camera.position.x - (camera.viewportWidth / 2) > tube.getPosTopTube().x + tube.getTopTube().getWidth()) {
+                    tube.reposition(tube.getPosTopTube().x + ((Tube.TUBE_WIDTH + TUBE_SPACING) * TUBE_COUNT));
+                }
+
+                if(tube.collides(bird.getBounds())) {
+                    sfx_hit.play();
+                    isPaused=true;
+                }
+
+                if(bird.getPosition().y <= ground.getHeight() + GROUND_Y_OFFSET) {
+                    sfx_hit.play();
+                    isPaused=true;
+                }
+
+                if ((bird.getPosition().x >= tube.getPosTopTube().x + tube.getTopTube().getWidth() / 3) &&
+                        (bird.getPosition().x <= tube.getPosTopTube().x + 2 * tube.getTopTube().getWidth() / 3) &&
+                        (bird.getPosition().y <= tube.getPosTopTube().y) &&
+                        (bird.getPosition().y >= tube.getPosBotTube().y) &&
+                        isPointed) {
+                    System.out.println("Point!");
+                    point++;
+                    sfx_point.play();
+                    isPointed = false;
+                } else {
+                    isPointed = true;
+                }
+                System.out.println(isPointed);
             }
-
-            if(tube.collides(bird.getBounds())) {
-                sfx_die.play();
-                gsm.set(new TipState(gsm));
+            camera.update();
+        } else {
+            if(Gdx.input.justTouched()) {
+                gsm.set(new PlayState(gsm));
+                FlappyBird.getInstance().resume();
             }
-
-            if(bird.getPosition().y <= ground.getHeight() + GROUND_Y_OFFSET) {
-                sfx_die.play();
-                gsm.set(new TipState(gsm));
-            }
-
         }
-        camera.update();
+
+
     }
 
     @Override
@@ -95,7 +136,7 @@ public class PlayState extends State {
         sb.draw(ground, posGround1.x, posGround1.y);
         sb.draw(ground, posGround2.x, posGround2.y);
 
-        font.draw(sb, "" + point, camera.position.x - 5, camera.position.y + 175);
+        font.draw(sb, "" + point/10, camera.position.x - 5, camera.position.y + 175);
 
         sb.end();
     }
@@ -125,8 +166,10 @@ public class PlayState extends State {
             tube.dispose();
         }
         ground.dispose();
-        sfx_die.dispose();
+        sfx_hit.dispose();
+        sfx_point.dispose();
         scoreboard.dispose();
+        manager.dispose();
         System.out.println("Play state disposed!");
     }
 }
